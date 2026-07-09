@@ -1,10 +1,71 @@
-substitutions:
-  name: "outequip-ac-d1mini"
-  friendly_name: "OutEquip AC"
+# Van ESPHome Transition
 
-  # Source location of the custom external component.
-  # Can be a local path string or a git repository source block.
-  outequip_ac_component_source: "components"
+Goal: move `outequip-ac-d1mini` from the home network/Home Assistant ESPHome
+instance to the van network/Home Assistant ESPHome instance without stranding
+the D1 Mini.
+
+## Current Important State
+
+- Device name: `outequip-ac-d1mini`
+- Current home IP observed during testing: `192.168.1.169`
+- MAC: `E8:DB:84:9C:2D:90`
+- The local repo YAML currently has no `wifi.ssid` / `wifi.password`; the
+  device is relying on stored WiFi credentials/captive portal behavior.
+- UART must stay on GPIO1 TX / GPIO3 RX at 115200.
+- Logger must keep `baud_rate: 0`.
+- The van ESPHome dashboard needs the custom component files under:
+
+```text
+/config/component/outequip_ac/
+```
+
+## Recommended Migration Path
+
+1. Copy the custom component folder to the van Home Assistant instance:
+
+```text
+components/outequip_ac/__init__.py
+components/outequip_ac/ac_framer.cpp
+components/outequip_ac/ac_framer.h
+components/outequip_ac/button.py
+components/outequip_ac/climate.py
+components/outequip_ac/light.py
+components/outequip_ac/number.py
+components/outequip_ac/outequip_ac.cpp
+components/outequip_ac/outequip_ac.h
+components/outequip_ac/sensor.py
+components/outequip_ac/switch.py
+```
+
+2. In the van Home Assistant ESPHome dashboard, create a device YAML named
+   `outequip-ac-d1mini.yaml` using the YAML below.
+
+3. Add these secrets to the van Home Assistant `secrets.yaml`:
+
+```yaml
+wifi_ssid: "VAN_WIFI_NAME"
+wifi_password: "VAN_WIFI_PASSWORD"
+```
+
+4. Move the D1 Mini into the van and power it up.
+
+5. If it does not join the van WiFi automatically, connect to its fallback AP:
+
+```text
+OutEquip AC Fallback
+```
+
+Then use the captive portal to set the van WiFi credentials.
+
+6. Once the device is visible on the van network, install from the van ESPHome
+   dashboard. This makes the van Home Assistant instance the source of truth.
+
+## Van ESPHome YAML
+
+```yaml
+substitutions:
+  name: outequip-ac-d1mini
+  friendly_name: OutEquip AC
 
 esphome:
   name: ${name}
@@ -15,13 +76,14 @@ esphome:
     version: "2.1.4-d1mini"
   min_version: 2026.4.5
 
-external_components:
-  - source: ${outequip_ac_component_source}
-    id: "outequip_ac_component"
-    components: [outequip_ac]
-
 esp8266:
   board: d1_mini
+
+external_components:
+  - source:
+      type: local
+      path: /config/component
+    components: [outequip_ac]
 
 logger:
   level: DEBUG
@@ -34,6 +96,8 @@ ota:
   - platform: esphome
 
 wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
   ap:
     ssid: "${friendly_name} Fallback"
 
@@ -175,4 +239,14 @@ button:
   - platform: restart
     name: "Restart"
     id: restart_button
-    entity_category: "diagnostic"
+    entity_category: diagnostic
+```
+
+## Notes
+
+- Do not change `name` during migration unless you intentionally want a new
+  mDNS/API identity.
+- Keep the same `name` so Home Assistant can rediscover the same API device on
+  the van network.
+- If the device fails to join van WiFi, use the fallback AP/captive portal
+  rather than reflashing blindly.

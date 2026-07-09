@@ -16,7 +16,7 @@ DEPENDENCIES = ["outequip_ac"]
 def default_visual_specs(config):
     from esphome.const import CONF_TARGET_TEMPERATURE, CONF_CURRENT_TEMPERATURE
     visual = config.setdefault(CONF_VISUAL, {})
-    visual.setdefault(CONF_MIN_TEMPERATURE, 16)
+    visual.setdefault(CONF_MIN_TEMPERATURE, 17)
     visual.setdefault(CONF_MAX_TEMPERATURE, 30)
     temp_step = visual.setdefault(CONF_TEMPERATURE_STEP, {})
     if not isinstance(temp_step, dict):
@@ -24,8 +24,8 @@ def default_visual_specs(config):
         temp_step = visual[CONF_TEMPERATURE_STEP] = {}
         temp_step[CONF_TARGET_TEMPERATURE] = val
         temp_step[CONF_CURRENT_TEMPERATURE] = val
-    temp_step.setdefault(CONF_TARGET_TEMPERATURE, 0.1)
-    temp_step.setdefault(CONF_CURRENT_TEMPERATURE, 0.1)
+    temp_step.setdefault(CONF_TARGET_TEMPERATURE, 1.0)
+    temp_step.setdefault(CONF_CURRENT_TEMPERATURE, 1.0)
     return config
 
 CONFIG_SCHEMA = cv.All(
@@ -39,4 +39,3 @@ CONFIG_SCHEMA = cv.All(
 async def to_code(config):
     parent = await cg.get_variable(config[CONF_OUTEQUIP_AC_ID])
     await climate.register_climate(parent, config)
-
